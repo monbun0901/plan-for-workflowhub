@@ -1,4 +1,4 @@
-# Step 5: Entity Definition & Database Schema
+# Step 5: Data Design (Database Schema + API Contracts)
 
 **Date:** 2026-02-07  
 **Status:** ✅ Completed
@@ -6,11 +6,21 @@
 ## Sources
 
 - Previous: [Step 4 - Directory Structure](step-4-directory-structure.md)
-- Architecture: [Step 3 - High-Level Architecture](step-3-high-level-architecture.md)
+- Architecture: [Step 3 - Architecture Design](step-3-architecture.md)
 
 ---
 
-## 1. Entity Relationship Diagram (ERD)
+## 🎯 Overview
+
+Complete data design for WorkflowHub covering:
+- **Part 1:** Entity Relationship Diagram (ERD)
+- **Part 2:** Database Schema (MySQL)
+- **Part 3:** Vector Store Schema
+**Part 4:** REST API Contracts & DTOs
+
+---
+
+## PART 1: Entity Relationship Diagram (ERD)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -52,9 +62,11 @@
 
 ---
 
-## 2. Core Entities
+## PART 2: Database Schema (MySQL)
 
-### 2.1 User
+### 2.1 User & Auth Tables
+
+#### users
 
 ```sql
 CREATE TABLE users (
@@ -69,17 +81,7 @@ CREATE TABLE users (
 );
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | UUID | Primary key |
-| email | String | Unique, login identifier |
-| password_hash | String | Bcrypt hashed |
-| display_name | String | Display name |
-| status | Enum | active/inactive/suspended |
-
----
-
-### 2.2 Organization
+#### organizations
 
 ```sql
 CREATE TABLE organizations (
@@ -95,15 +97,7 @@ CREATE TABLE organizations (
 );
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | UUID | Primary key |
-| slug | String | URL-friendly (e.g., `my-company`) |
-| settings | JSON | Org-level configurations |
-
----
-
-### 2.3 Member (User ↔ Organization)
+#### members
 
 ```sql
 CREATE TABLE members (
@@ -120,14 +114,11 @@ CREATE TABLE members (
 );
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| role | Enum | owner/admin/member |
-| status | Enum | active/pending/removed |
-
 ---
 
-### 2.4 Project
+### 2.2 Project Management Tables
+
+#### projects
 
 ```sql
 CREATE TABLE projects (
@@ -148,9 +139,7 @@ CREATE TABLE projects (
 );
 ```
 
----
-
-### 2.5 Issue
+#### issues
 
 ```sql
 CREATE TABLE issues (
@@ -181,9 +170,7 @@ CREATE TABLE issues (
 );
 ```
 
----
-
-### 2.6 Task
+#### tasks
 
 ```sql
 CREATE TABLE tasks (
@@ -218,9 +205,7 @@ CREATE TABLE tasks (
 );
 ```
 
----
-
-### 2.7 Document
+#### documents
 
 ```sql
 CREATE TABLE documents (
@@ -254,7 +239,6 @@ CREATE TABLE documents (
   INDEX idx_embedding (organization_id, embedding_status)
 );
 
--- Document versions for history
 CREATE TABLE document_versions (
   id              VARCHAR(36) PRIMARY KEY,
   document_id     VARCHAR(36) NOT NULL REFERENCES documents(id),
@@ -270,9 +254,9 @@ CREATE TABLE document_versions (
 
 ---
 
-## 3. AI Entities
+### 2.3 AI Tables
 
-### 3.1 Agent
+#### agents
 
 ```sql
 CREATE TABLE agents (
@@ -303,9 +287,7 @@ CREATE TABLE agents (
 );
 ```
 
----
-
-### 3.2 Chat & Message
+#### chats & messages
 
 ```sql
 CREATE TABLE chats (
@@ -353,12 +335,9 @@ CREATE TABLE messages (
 );
 ```
 
----
-
-### 3.3 Workflow
+#### workflow tables
 
 ```sql
--- Workflow Templates (design)
 CREATE TABLE workflow_templates (
   id              VARCHAR(36) PRIMARY KEY,
   organization_id VARCHAR(36) NOT NULL REFERENCES organizations(id),
@@ -383,7 +362,6 @@ CREATE TABLE workflow_templates (
   INDEX idx_trigger (trigger_type, status)
 );
 
--- Workflow Instances (execution)
 CREATE TABLE workflow_instances (
   id              VARCHAR(36) PRIMARY KEY,
   template_id     VARCHAR(36) NOT NULL REFERENCES workflow_templates(id),
@@ -392,13 +370,13 @@ CREATE TABLE workflow_instances (
   status          ENUM('pending', 'running', 'paused', 'completed', 'failed', 'cancelled') DEFAULT 'pending',
   current_step    INT DEFAULT 0,
   
-  input_data      JSON,                          -- Input parameters
-  output_data     JSON,                          -- Execution results
+  input_data      JSON,
+  output_data     JSON,
   error           TEXT,
   
   triggered_by    ENUM('user', 'event', 'schedule', 'agent'),
-  triggered_by_id VARCHAR(36),                   -- User ID or Agent ID
-  trigger_event   JSON,                          -- Event that triggered
+  triggered_by_id VARCHAR(36),
+  trigger_event   JSON,
   
   started_at      TIMESTAMP,
   completed_at    TIMESTAMP,
@@ -408,7 +386,6 @@ CREATE TABLE workflow_instances (
   INDEX idx_template (template_id)
 );
 
--- Workflow Step Logs
 CREATE TABLE workflow_step_logs (
   id              VARCHAR(36) PRIMARY KEY,
   instance_id     VARCHAR(36) NOT NULL REFERENCES workflow_instances(id),
@@ -430,10 +407,11 @@ CREATE TABLE workflow_step_logs (
 
 ---
 
-## 4. Vector Store Schema (Pinecone/Weaviate)
+## PART 3: Vector Store Schema
+
+### 3.1 Vector Document Interface
 
 ```typescript
-// Vector DB Schema (conceptual)
 interface VectorDocument {
   id: string;                    // UUID
   
@@ -456,7 +434,7 @@ interface VectorDocument {
 }
 ```
 
-### Vector Query Pattern
+### 3.2 Query Pattern (REQUIRED)
 
 ```typescript
 // ALWAYS filter by organization_id
@@ -470,9 +448,7 @@ const results = await vectorDB.query({
 });
 ```
 
----
-
-## 5. Key Constraints Summary
+### 3.3 Tenant Isolation Summary
 
 | Entity | Tenant Field | Index |
 |--------|--------------|-------|
@@ -489,20 +465,189 @@ const results = await vectorDB.query({
 
 ---
 
-## 6. Related Documents
+## PART 4: REST API Contracts & DTOs
+
+### 4.1 API Design Principles
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    API DESIGN PRINCIPLES                     │
+├─────────────────────────────────────────────────────────────┤
+│  ✅ RESTful conventions                                      │
+│  ✅ Consistent response format                               │
+│  ✅ Proper HTTP status codes                                 │
+│  ✅ Tenant context in every request                         │
+│  ✅ Pagination for list endpoints                           │
+│  ✅ Validation via DTOs                                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Response Formats
+
+#### Success Response
+
+```typescript
+interface ApiResponse<T> {
+  success: true;
+  data: T;
+  meta?: {
+    pagination?: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+}
+```
+
+#### Error Response
+
+```typescript
+interface ApiErrorResponse {
+  success: false;
+  error: {
+    code: string;           // e.g., "VALIDATION_ERROR", "NOT_FOUND"
+    message: string;        // Human-readable message
+    details?: Record<string, string[]>;  // Field-level errors
+  };
+}
+```
+
+### 4.3 HTTP Status Codes
+
+| Status | Usage |
+|--------|-------|
+| 200 | Success (GET, PUT, PATCH) |
+| 201 | Created (POST) |
+| 204 | No Content (DELETE) |
+| 400 | Bad Request / Validation Error |
+| 401 | Unauthorized |
+| 403 | Forbidden |
+| 404 | Not Found |
+| 409 | Conflict (duplicate) |
+| 500 | Internal Server Error |
+
+---
+
+### 4.4 Auth API
+
+**Endpoints:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/logout` | Logout |
+| POST | `/api/auth/refresh` | Refresh token |
+| GET | `/api/auth/me` | Get current user  |
+
+**DTOs:**
+
+```typescript
+interface RegisterDTO {
+  email: string;
+  password: string;        // min 8 chars
+  displayName: string;
+}
+
+interface LoginDTO {
+  email: string;
+  password: string;
+}
+
+interface AuthResponse {
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    avatarUrl?: string;
+  };
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+  };
+}
+```
+
+---
+
+### 4.5 Organization API
+
+**Endpoints:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/organizations` | List user's organizations |
+| POST | `/api/organizations` | Create organization |
+| GET | `/api/organizations/:orgId` | Get organization details |
+| PUT | `/api/organizations/:orgId` | Update organization |
+| GET | `/api/organizations/:orgId/members` | List members |
+| POST | `/api/organizations/:orgId/members` | Invite member |
+
+---
+
+### 4.6 Project API
+
+**Endpoints:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/org/:orgId/projects` | List projects |
+| POST | `/api/org/:orgId/projects` | Create project |
+| GET | `/api/org/:orgId/projects/:projectId` | Get project |
+| PUT | `/api/org/:orgId/projects/:projectId` | Update project |
+
+---
+
+### 4.7 Issue, Task, Document APIs
+
+See sections 6-8 in original step-5b for full details:
+- Issue API: List, create, update, comments
+- Task API: List, create, update status
+- Document API: List, create, update, versions, embed
+
+---
+
+### 4.8 AI-Specific APIs
+
+#### Agent API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/org/:orgId/agents` | List agents |
+| POST | `/api/org/:orgId/agents` | Create agent |
+| GET | `/api/org/:orgId/agents/:agentId` | Get agent |
+| PUT | `/api/org/:orgId/agents/:agentId` | Update agent |
+
+#### Chat API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/chats` | List chats |
+| POST | `/api/chats` | Create new chat |
+| GET | `/api/chats/:chatId` | Get chat with messages |
+| POST | `/api/chats/:chatId/messages` | Send message |
+
+#### Workflow API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/projects/:projectId/workflows` | List workflow templates |
+| POST | `/api/projects/:projectId/workflows` | Create workflow |
+| POST | `/api/projects/:projectId/workflows/:wfId/trigger` | Manual trigger |
+| GET | `/api/workflow-instances/:instanceId` | Get instance details |
+
+---
+
+## Related Documents
 
 - [Step 4 - Directory Structure](step-4-directory-structure.md)
-- [Step 3 - High-Level Architecture](step-3-high-level-architecture.md)
-- [Step 3b - Data Flows](step-3b-data-flows.md)
+- [Step 3 - Architecture Design](step-3-architecture.md)
 - [Step 2 - MVP Scope](step-2-mvp-scope.md)
 
 ---
 
-## 7. GitHub Issues
-
-- #8: Step 5 - Entity Definition & Database Schema
-
----
-
-*Document Version: 1.0*
-*Last Updated: 2026-02-07*
+*Document Version: 2.0 (Consolidated)*  
+*Last Updated: 2026-02-11*

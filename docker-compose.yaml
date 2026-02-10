@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Base Database: MySQL 8.0
+  mysql:
+    image: mysql:8.0
+    container_name: wh-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-workflowhub_db}
+      MYSQL_USER: ${DB_USER:-wh_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-wh_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - wh-network
+
+  # Caching and Session: Redis
+  redis:
+    image: redis:7-alphine
+    container_name: wh-redis
+    restart: always
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - wh-network
+
+  # AI Vector Database: ChromaDB
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: wh-chromadb
+    restart: always
+    ports:
+      - "8001:8000"
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+    volumes:
+      - chromadb_data:/chroma/chroma
+    networks:
+      - wh-network
+
+  # Optional: Database Management UI
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: wh-phpmyadmin
+    restart: always
+    ports:
+      - "8888:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+    depends_on:
+      - mysql
+    networks:
+      - wh-network
+
+networks:
+  wh-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  chromadb_data:
