@@ -45,7 +45,7 @@
 |---------|--------|--------|
 | Project grid (responsive) | 🟢 MVP | Auto-fill cards |
 | Search by name | 🟢 MVP | Debounced search |
-| Filter by status | 🟢 MVP | Active / Archived / All |
+| **Filter by status** | 🟢 MVP | From `workflow_statuses` (target_type='project') |
 | Sort (newest, name) | 🟢 MVP | Sort dropdown |
 | Create Project button | 🟢 MVP | Navigate → `/projects/new` |
 | Pagination | 🟢 MVP | Server-side pagination |
@@ -76,7 +76,8 @@
 
 | Method | Endpoint | Mô tả |
 |--------|----------|--------|
-| `GET` | `/projects?page=1&limit=20&status=active&search=...` | Filtered list |
+| `GET` | `/:orgId/projects?page=1&limit=20&status=...&search=...` | Filtered list |
+| `GET` | `/:orgId/lookups/workflow-statuses?target_type=project` | Fetch project status options |
 
 ---
 

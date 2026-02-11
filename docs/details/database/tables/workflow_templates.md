@@ -32,13 +32,14 @@ CREATE TABLE workflow_templates (
   -- }
   steps_config    JSON NOT NULL,
   
-  status          ENUM('active', 'draft', 'archived') DEFAULT 'draft',
+  -- Status now uses workflow_statuses (target_type='workflow_template')
+  status_id       VARCHAR(36) REFERENCES workflow_statuses(id),
   
   created_by      VARCHAR(36) REFERENCES users(id),
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
-  INDEX idx_org_status (organization_id, status)
+  INDEX idx_org_status (organization_id, status_id)
 );
 ```
 

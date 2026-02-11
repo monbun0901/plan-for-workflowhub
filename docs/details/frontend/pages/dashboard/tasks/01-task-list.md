@@ -44,16 +44,16 @@
 |---------|--------|--------|
 | **View toggle (Grid/Table)** | 🟢 MVP | Toggle icons ⚏/☰, persist preference |
 | Search by title | 🟢 MVP | Debounced |
-| **Filter: Assignees** | 🟢 MVP | Multi-select, filter by assigned users |
-| **Filter: Assignments** | 🟢 MVP | Multi-select, filter by task_assignments |
+| **Filter: Assignees** | 🟢 MVP | Multi-select, current assigned users (from `task_assignees`) |
 | **Filter: Tags** | 🟢 MVP | Multi-select tag filter |
 | **Filter: Category** | 🟢 MVP | Single-select category |
-| **Filter: Status** | 🟢 MVP | Single-select from `task_status` table |
+| **Filter: Status** | 🟢 MVP | Single-select from `workflow_statuses` (target_type='task') |
 | Create Task → `/projects/:id/tasks/new` | 🟢 MVP | Page-based |
 | Inline status toggle | 🟢 MVP | Quick status change |
 | Priority badge | 🟢 MVP | Color-coded badges |
 | Drag & drop reorder | 🟡 Scale | Sortable |
 | Kanban view (board) | 🟡 Scale | 3rd view mode option |
+| View assignment history | 🟡 Scale | Show audit trail from `task_assignments` table |
 | Empty state | 🟢 MVP | "No tasks yet" + CTA |
 
 ---
@@ -76,22 +76,16 @@
 
 | Method | Endpoint | Mô tả |
 |--------|----------|--------|
-| `GET` | `/projects/:id/tasks?assignees=...&assignments=...&tags=...&category=...&status=...` | Advanced filtered list |
-| `PATCH` | `/projects/:id/tasks/:taskId` | Quick status update |
-| `GET` | `/task-statuses` | Fetch status options (from `task_status` table) |
+| `GET` | `/:orgId/projects/:id/tasks?assignees=...&tags=...&category=...&status=...` | Advanced filtered list |
+| `PATCH` | `/:orgId/projects/:id/tasks/:taskId` | Quick status update |
+| `GET` | `/:orgId/lookups/workflow-statuses?target_type=task` | Fetch task status options |
 
-## 🗂️ Database
+## 🗂️ Database Tables
 
-**New Table Required:** `task_status`
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key |
-| `name` | VARCHAR | Status name (e.g., "Todo", "In Progress") |
-| `slug` | VARCHAR | URL-safe slug |
-| `color` | VARCHAR | Badge color (#hex) |
-| `order` | INT | Display order |
-| `is_default` | BOOLEAN | Default status |
+**Referenced Tables:**
+- `task_assignees` - Current assignees (many-to-many, used for Assignees filter)
+- `task_assignments` - Assignment history audit log (future: assignment history feature)
+- `workflow_statuses` - Unified status table (filtered by target_type='task')
 
 ---
 

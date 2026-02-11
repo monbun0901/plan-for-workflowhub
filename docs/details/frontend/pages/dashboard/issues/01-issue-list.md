@@ -37,7 +37,7 @@
 | Issue table | 🟢 MVP | Cards (mobile) / Table (desktop) |
 | Search by title | 🟢 MVP | Debounced |
 | Filter by severity | 🟢 MVP | Critical/High/Medium/Low |
-| Filter by status | 🟢 MVP | Open/InProgress/Fixed/Closed |
+| **Filter by status** | 🟢 MVP | From `workflow_statuses` (target_type='issue') |
 | Create Issue → page | 🟢 MVP | `/projects/:id/issues/new` |
 | Severity badge | 🟢 MVP | Color-coded |
 | Empty state | 🟢 MVP | "No issues found" + CTA |
@@ -54,7 +54,8 @@
 
 | Method | Endpoint | Mô tả |
 |--------|----------|--------|
-| `GET` | `/projects/:id/issues?severity=...&status=...` | Filtered list |
+| `GET` | `/:orgId/projects/:id/issues?severity=...&status=...` | Filtered list |
+| `GET` | `/:orgId/lookups/workflow-statuses?target_type=issue` | Fetch issue status options |
 
 ---
 

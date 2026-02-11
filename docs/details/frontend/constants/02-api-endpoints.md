@@ -27,27 +27,50 @@ export const API_ENDPOINTS = {
     REFRESH: `${API_BASE}/auth/refresh`,
     LOGOUT: `${API_BASE}/auth/logout`,
   },
-  PROJECTS: {
-    LIST: `${API_BASE}/projects`,
-    DETAIL: (id: string) => `${API_BASE}/projects/${id}`,
-    CREATE: `${API_BASE}/projects`,
-    UPDATE: (id: string) => `${API_BASE}/projects/${id}`,
-    DELETE: (id: string) => `${API_BASE}/projects/${id}`,
-  },
-  TASKS: {
-    LIST: (projectId: string) => `${API_BASE}/projects/${projectId}/tasks`,
-    DETAIL: (projectId: string, taskId: string) =>
-      `${API_BASE}/projects/${projectId}/tasks/${taskId}`,
-  },
-  ISSUES: {
-    LIST: (projectId: string) => `${API_BASE}/projects/${projectId}/issues`,
-    DETAIL: (projectId: string, issueId: string) =>
-      `${API_BASE}/projects/${projectId}/issues/${issueId}`,
+  USERS: {
+    ME: `${API_BASE}/users/me`,
+    UPDATE_ME: `${API_BASE}/users/me`,
+    PREFERENCES: `${API_BASE}/users/me/preferences`,
   },
   ORGANIZATIONS: {
     LIST: `${API_BASE}/organizations`,
-    DETAIL: (id: string) => `${API_BASE}/organizations/${id}`,
-    MEMBERS: (id: string) => `${API_BASE}/organizations/${id}/members`,
+    CREATE: `${API_BASE}/organizations`,
+    DETAIL: (orgId: string) => `${API_BASE}/organizations/${orgId}`,
+    UPDATE: (orgId: string) => `${API_BASE}/organizations/${orgId}`,
+    MEMBERS: (orgId: string) => `${API_BASE}/organizations/${orgId}/members`,
+    INVITE_MEMBER: (orgId: string) => `${API_BASE}/organizations/${orgId}/members/invite`,
+  },
+  PROJECTS: {
+    LIST: (orgId: string) => `${API_BASE}/${orgId}/projects`,
+    DETAIL: (orgId: string, id: string) => `${API_BASE}/${orgId}/projects/${id}`,
+    CREATE: (orgId: string) => `${API_BASE}/${orgId}/projects`,
+    UPDATE: (orgId: string, id: string) => `${API_BASE}/${orgId}/projects/${id}`,
+    DELETE: (orgId: string, id: string) => `${API_BASE}/${orgId}/projects/${id}`,
+    STATS: (orgId: string, id: string) => `${API_BASE}/${orgId}/projects/${id}/stats`,
+  },
+  TASKS: {
+    LIST: (orgId: string, projectId: string) => `${API_BASE}/${orgId}/projects/${projectId}/tasks`,
+    DETAIL: (orgId: string, projectId: string, taskId: string) => 
+      `${API_BASE}/${orgId}/projects/${projectId}/tasks/${taskId}`,
+    CREATE: (orgId: string, projectId: string) => `${API_BASE}/${orgId}/projects/${projectId}/tasks`,
+    UPDATE: (orgId: string, projectId: string, taskId: string) =>
+      `${API_BASE}/${orgId}/projects/${projectId}/tasks/${taskId}`,
+    UPDATE_STATUS: (orgId: string, taskId: string) => `${API_BASE}/${orgId}/tasks/${taskId}/status`,
+    ASSIGN: (orgId: string, taskId: string) => `${API_BASE}/${orgId}/tasks/${taskId}/assign`,
+  },
+  ISSUES: {
+    LIST: (orgId: string, projectId: string) => `${API_BASE}/${orgId}/projects/${projectId}/issues`,
+    LIST_ALL: (orgId: string) => `${API_BASE}/${orgId}/issues`,
+    DETAIL: (orgId: string, projectId: string, issueId: string) =>
+      `${API_BASE}/${orgId}/projects/${projectId}/issues/${issueId}`,
+    CREATE: (orgId: string, projectId: string) => `${API_BASE}/${orgId}/projects/${projectId}/issues`,
+  },
+  LOOKUPS: {
+    WORKFLOW_STATUSES: (orgId: string, targetType?: 'project' | 'issue' | 'task' | 'document' | 'workflow_template') =>
+      `${API_BASE}/${orgId}/lookups/workflow-statuses${targetType ? `?target_type=${targetType}` : ''}`,
+    CATEGORIES: (orgId: string) => `${API_BASE}/${orgId}/lookups/categories`,
+    TAGS: (orgId: string) => `${API_BASE}/${orgId}/lookups/tags`,
+    ROLES: (orgId: string) => `${API_BASE}/${orgId}/lookups/roles`,
   },
 } as const;
 ```

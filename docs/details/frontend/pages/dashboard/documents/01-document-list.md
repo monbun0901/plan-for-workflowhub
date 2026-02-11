@@ -40,15 +40,14 @@
 
 | Feature | Status | Mô tả |
 |---------|--------|--------|
-| **View toggle (Grid/Table)** | 🟡 Scale | Toggle icons ⚏/☰, persist preference |
-| Document grid/table | 🟡 Scale | Card or table (icon + title + date) |
-| Search by title | 🟡 Scale | Debounced |
-| **Filter: Category** | 🟡 Scale | Single-select category filter |
-| **Filter: Collaborators** | 🟡 Scale | Multi-select users who have access |
-| **Filter: Tags** | 🟡 Scale | Multi-select tag filter |
-| Create Document → page | 🟡 Scale | `/documents/new` |
-| Delete document | 🟡 Scale | Confirm dialog |
-| RAG-ready indexing | 🔴 Coming | Auto-index cho AI search |
+| **View toggle (Grid/Table)** | 🟢 MVP | See [Data Grid Component](../../../components/05-data-grid.md) |
+| Search by title | 🟢 MVP | Debounced |
+| **Filter: Category** | 🟢 MVP | Single-select category |
+| **Filter: Collaborators** | 🟢 MVP | Multi-select users who edited |
+| **Filter: Tags** | 🟢 MVP | Multi-select tag filter |
+| **Filter: Status** | 🟢 MVP | From `workflow_statuses` (target_type='document') |
+| Create Document → page | 🟢 MVP | `/projects/:id/documents/new` |
+| Empty state | 🟢 MVP | "No documents yet" + CTA |
 
 ---
 
@@ -56,7 +55,7 @@
 
 | Hook | Chức năng |
 |------|----------|
-| `useDocuments(projectId, filters)` | TanStack Query with advanced filters |
+| `useDocuments(projectId, filters)` | TanStack Query: list + advanced filters |
 | `useViewMode()` | Persist grid/table preference |
 
 ## 🗄️ Stores
@@ -69,7 +68,8 @@
 
 | Method | Endpoint | Mô tả |
 |--------|----------|--------|
-| `GET` | `/projects/:id/documents?category=...&collaborators=...&tags=...` | Filtered list |
+| `GET` | `/:orgId/projects/:id/documents?category=...&collaborators=...&tags=...&status=...` | Advanced filtered list |
+| `GET` | `/:orgId/lookups/workflow-statuses?target_type=document` | Fetch document status options |
 | `DELETE` | `/documents/:docId` | Delete document |
 
 ---

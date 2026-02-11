@@ -26,14 +26,15 @@ CREATE TABLE documents (
   parent_id       VARCHAR(36) REFERENCES documents(id),
   order_index     INT DEFAULT 0,
   
-  status          ENUM('draft', 'published', 'archived') DEFAULT 'draft',
+  -- Status now uses workflow_statuses (target_type='document')
+  status_id       VARCHAR(36) REFERENCES workflow_statuses(id),
   visibility_id   VARCHAR(36) REFERENCES visibility_levels(id),
   version         INT DEFAULT 1,
   
   created_by      VARCHAR(36) NOT NULL REFERENCES users(id),
   updated_by      VARCHAR(36) REFERENCES users(id),
   
-  -- Vector embedding for RAG
+  -- Vector embedding for RAG (technical status, keep ENUM)
   embedding_status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
   last_embedded_at TIMESTAMP,
   
@@ -42,6 +43,7 @@ CREATE TABLE documents (
   
   UNIQUE KEY unique_project_slug (project_id, slug),
   INDEX idx_org (organization_id),
+  INDEX idx_org_status (organization_id, status_id),
   INDEX idx_category (organization_id, category),
   INDEX idx_embedding (organization_id, embedding_status)
 );

@@ -93,10 +93,9 @@ interface FilterConfig {
 // Example: tasks page filters
 const TASK_FILTERS: FilterConfig[] = [
   { key: 'assignees', label: 'Assignees', type: 'multiselect' },
-  { key: 'assignments', label: 'Assignments', type: 'multiselect' },
   { key: 'tags', label: 'Tags', type: 'multiselect' },
   { key: 'category', label: 'Category', type: 'select' },
-  { key: 'status', label: 'Status', type: 'select' }, // ← task_status table
+  { key: 'status', label: 'Status', type: 'select' }, // ← workflow_statuses (target_type='task')
 ];
 
 // Example: documents page filters
