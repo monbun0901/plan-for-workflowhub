@@ -3,16 +3,16 @@
 **Date:** 2026-02-11  
 **Status:** ✅ Ready for Implementation
 
-> **📌 Note:** This is the **HIGH-LEVEL** implementation plan outlining 8 phases.  
-> For **DETAILED** implementation guides with **Antigravity Skills**, see [../details/](../details/).
+> **📌 Note:** Đây là kế hoạch triển khai **HIGH-LEVEL** gồm 8 phases.  
+> Chi tiết xem tại [../details/](../details/).
 
 
-## Sources
+## Tài liệu liên quan
 
-- Previous: [Step 6 - Technical Checkpoint](step-6-technical-checkpoint.md)
-- Database: [Step 5a - Entity & Database Schema](step-5a-entity-database-schema.md)
-- API: [Step 5b - API Contracts](step-5b-api-contracts.md)
+- Trước đó: [Step 6 - Technical Checkpoint](step-6-technical-checkpoint.md)
+- Database & API: [Step 5 - Data Design](step-5-data-design.md)
 - Architecture: [Step 4 - Directory Structure](step-4-directory-structure.md)
+- Tech Stack: [Final Tech Stack](../final-tech-stack.md)
 
 ---
 
@@ -437,8 +437,8 @@ export const tenantMiddleware = async (req, res, next) => {
 **Dependencies:**
 ```json
 {
-  "chromadb": "^1.5.0",
-  "openai": "^4.20.0"  // For embeddings (MVP)
+  "chromadb": "^0.5.0",
+  "openai": "^4.20.0"  // Fallback embeddings (MVP)
 }
 ```
 
@@ -942,7 +942,13 @@ OPENAI_API_KEY=sk-...
 # ANTHROPIC_API_KEY=sk-ant-...  (optional)
 
 # Vector DB
-CHROMA_URL=http://localhost:8000
+CHROMA_HOST=localhost
+CHROMA_PORT=8001
+CHROMA_AUTH_TOKEN=whub-chroma-secret-token
+
+# Embedding (Ollama local-first)
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_EMBED_MODEL=nomic-embed-text
 
 # Frontend
 NEXT_PUBLIC_API_URL=http://localhost:5000
@@ -961,7 +967,9 @@ JWT_REFRESH_SECRET=<strong-refresh-secret>
 
 OPENAI_API_KEY=sk-...
 
-CHROMA_URL=http://chroma:8000
+CHROMA_HOST=chromadb
+CHROMA_PORT=8001
+CHROMA_AUTH_TOKEN=<strong-token>
 
 NEXT_PUBLIC_API_URL=https://api.workflowhub.com
 ```
@@ -997,15 +1005,18 @@ NEXT_PUBLIC_API_URL=https://api.workflowhub.com
 
 ---
 
-## Related Documents
+## Tài liệu liên quan
 
 - [Step 6 - Technical Checkpoint](step-6-technical-checkpoint.md)
-- [Step 5a - Entity & Database Schema](step-5a-entity-database-schema.md)
-- [Step 5b - API Contracts](step-5b-api-contracts.md)
+- [Step 5 - Data Design](step-5-data-design.md)
 - [Step 4 - Directory Structure](step-4-directory-structure.md)
-- [Final Tech Stack](../../final-tech-stack.md)
+- [Final Tech Stack](../final-tech-stack.md)
+- [Database Migration Order](../details/database/migration-order.md)
+- [Frontend Implementation Steps](../details/frontend/implementation-steps.md)
+- [Backend Modules](../details/backend/modules/README.md)
+- [Vector DB Plan](../details/backend/services/04-vector-db.md)
 
 ---
 
 *Document Version: 1.0*  
-*Last Updated: 2026-02-11*
+*Last Updated: 2026-02-13*
