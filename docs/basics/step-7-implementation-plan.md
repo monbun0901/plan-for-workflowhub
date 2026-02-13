@@ -1,7 +1,8 @@
 # Step 7: Implementation Plan
 
 **Date:** 2026-02-11  
-**Status:** ✅ Ready for Implementation
+**Updated:** 2026-02-13  
+**Status:** 🔄 Implementation In Progress (Phase 7 Complete, Frontend Pending)
 
 > **📌 Note:** Đây là kế hoạch triển khai **HIGH-LEVEL** gồm 8 phases.  
 > Chi tiết xem tại [../details/](../details/).
@@ -26,9 +27,9 @@ Kế hoạch triển khai WorkflowHub theo 7 phases, từ setup project đến d
 
 ---
 
-## Phase 1: Project Setup & Core Infrastructure
+## Phase 1: Project Setup & Core Infrastructure ✅ COMPLETED
 
-**Duration:** 1-2 tuần  
+**Duration:** 1-2 tuần → Actual: 1 tuần  
 **Goal:** Setup monorepo, database, và core utilities
 
 ### Tasks
@@ -146,9 +147,9 @@ services:
 
 ---
 
-## Phase 2: Authentication & Authorization
+## Phase 2: Authentication & Authorization ✅ COMPLETED
 
-**Duration:** 1 tuần  
+**Duration:** 1 tuần → Actual: 3 ngày  
 **Goal:** User authentication với JWT
 
 ### Tasks
@@ -240,9 +241,9 @@ export const jwtConfig = {
 
 ---
 
-## Phase 3: Multi-Tenant (Organizations & Members)
+## Phase 3: Multi-Tenant (Organizations & Members) ✅ COMPLETED
 
-**Duration:** 1 tuần  
+**Duration:** 1 tuần → Actual: 3 ngày  
 **Goal:** Multi-tenant isolation
 
 ### Tasks
@@ -322,10 +323,10 @@ export const tenantMiddleware = async (req, res, next) => {
 
 ---
 
-## Phase 4: Project Management Core
+## Phase 4: Project Management Core ✅ COMPLETED
 
-**Duration:** 2 tuần  
-**Goal:** Projects, Issues, Tasks, Comments
+**Duration:** 2 tuần → Actual: 1 tuần  
+**Goal:** Projects, Issues, Workflow Statuses, Comments, Labels, Documents
 
 ### Tasks
 
@@ -403,10 +404,10 @@ export const tenantMiddleware = async (req, res, next) => {
 
 ---
 
-## Phase 5: Documents & Knowledge Base
+## Phase 5: Collaboration & Knowledge Base ✅ COMPLETED
 
-**Duration:** 1-2 tuần  
-**Goal:** Document management + vector embeddings
+**Duration:** 1-2 tuần → Actual: 3 ngày  
+**Goal:** Comments, Labels, Documents (Vector embeddings deferred to Phase 8)
 
 ### Tasks
 
@@ -507,205 +508,133 @@ export class EmbeddingService {
 
 ---
 
-## Phase 6: AI Agents & Chat
+## Phase 6: AI Agents & Chat ✅ COMPLETED
 
-**Duration:** 2-3 tuần  
-**Goal:** AI Agents + RAG-based Chat
+**Duration:** 2-3 tuần → Actual: 2 ngày  
+**Goal:** Multi-provider AI Agents + Chat (RAG deferred)
 
-### Tasks
+### Actual Implementation
 
-#### 6.1 Database Migrations
-```bash
-[ ] Create agents migration
-[ ] Create chats migration
-[ ] Create messages migration
+#### 6.1 Database (Migration Batch 4)
+- [x] `agents` table (provider, model, system_prompt, type)
+- [x] `chats` table (org, project, agent, user scoped)
+- [x] `messages` table (role, content, token_count)
+
+#### 6.2 Multi-Provider Architecture
+```
+LLMProvider (Abstract Interface)
+├── OpenAIProvider  (native fetch → OpenAI API)
+├── GeminiProvider  (native fetch → Gemini API)
+└── ProviderFactory (registry pattern, env-based API keys)
 ```
 
-#### 6.2 AI Agents Module
-```bash
-[ ] agent.model.ts
-[ ] agent.controller.ts
-[ ] agent.service.ts
-[ ] llm.service.ts (OpenAI/Claude client)
-[ ] System prompt templates (PM, Dev, Reviewer)
-```
+#### 6.3 Core Services
+- [x] `AgentService` — CRUD + auto system prompt by type
+- [x] `ChatService` — Chat lifecycle, message flow, auto-titling
+- [x] `AIOrchestrator` — Central AI pipeline (build context → select provider → call LLM)
+- [x] System prompts: `general`, `pm`, `developer`, `reviewer`
 
-**System Prompts:**
-```typescript
-// apps/api/src/modules/agents/prompts/pm.prompt.ts
-export const PM_SYSTEM_PROMPT = `
-You are a Project Manager AI assistant for WorkflowHub.
-Your role: Help manage projects, break down issues into tasks, track progress.
-Capabilities: Create tasks, update statuses, analyze project health.
-Context: You have access to project documents, issues, and tasks.
-`;
+#### 6.4 API Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST   | `/:orgId/agents` | Create agent |
+| GET    | `/:orgId/agents` | List agents |
+| GET    | `/:orgId/agents/providers` | List available providers |
+| POST   | `/:orgId/chats` | Create chat |
+| GET    | `/:orgId/chats` | List chats |
+| POST   | `/:orgId/chats/:id/messages` | Send message → AI responds |
 
-// Similar for Developer, Reviewer roles
-```
-
-#### 6.3 Chat Module with RAG
-```bash
-[ ] chat.controller.ts
-[ ] chat.service.ts
-[ ] ai-orchestrator.service.ts (RAG pipeline)
-[ ] vector-search.service.ts
-```
-
-**RAG Pipeline:**
-```typescript
-export class AIOrchestrator {
-  async processQuery(
-    chatId: string,
-    query: string,
-    context: { organizationId: string; projectId?: string }
-  ): Promise<string> {
-    // 1. Generate query embedding
-    const queryEmbedding = await this.embedQuery(query);
-    
-    // 2. Retrieve relevant documents from Chroma
-    const results = await this.chromaCollection.query({
-      queryEmbeddings: [queryEmbedding],
-      nResults: 5,
-      where: {
-        organization_id: context.organizationId,
-        ...(context.projectId && { project_id: context.projectId }),
-      },
-    });
-    
-    // 3. Build context prompt
-    const contextPrompt = this.buildContextPrompt(results);
-    
-    // 4. Call LLM
-    const response = await this.llmService.chat({
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT + contextPrompt },
-        { role: 'user', content: query },
-      ],
-    });
-    
-    // 5. Save message with sources
-    await this.saveMessage(chatId, query, response, results.ids);
-    
-    return response;
-  }
-}
-```
-
-#### 6.4 Frontend Chat Components
-```bash
-[ ] Chat sidebar (chat list)
-[ ] Chat window (message thread)
-[ ] Message input (with loading state)
-[ ] Source citations display
-[ ] Agent selector
-```
-
-### Verification
-
-- [ ] Agents can be created with custom prompts
-- [ ] Chat creates new conversation
-- [ ] POST /api/chats/:id/messages triggers RAG
-- [ ] Chroma returns relevant documents
-- [ ] LLM responds with context
-- [ ] Message sources stored (document IDs)
-- [ ] Frontend: Chat UI sends/receives messages
-- [ ] Frontend: Sources displayed with responses
-- [ ] AI responses accurate (based on knowledge base)
+### Verification ✅
+- [x] Agent CRUD works
+- [x] Multi-provider (OpenAI + Gemini) tested
+- [x] Chat creates conversations
+- [x] AI responds via Gemini API
+- [x] Message history maintained (capped at 20)
+- [ ] RAG pipeline (deferred — requires ChromaDB setup)
+- [ ] Frontend Chat UI (Phase 8)
 
 ---
 
-## Phase 7: Workflow Engine
+## Phase 7: Workflow Engine ✅ COMPLETED
 
-**Duration:** 2-3 tuần  
-**Goal:** Workflow automation
+**Duration:** 2-3 tuần → Actual: 1 ngày  
+**Goal:** Workflow-centric automation (AI là tool trong pipeline)
 
-### Tasks
+### 🏛️ Architecture Decision: Workflow-Centric
 
-#### 7.1 Database Migrations
-```bash
-[ ] Create workflow_templates migration
-[ ] Create workflow_instances migration
-[ ] Create workflow_step_logs migration
+```
+Event (Issue Created/Updated)
+        │
+        ▼
+   WorkflowTriggerService (EventEmitter)
+        │ findMatchingWorkflows()
+        ▼
+   WorkflowExecutor.executeRun()
+        │ loop through steps (context passing)
+        ▼
+   Action Registry
+   ├── update_issue   ✅ — Update status/assignee/priority
+   ├── call_ai        ✅ — Call AI Agent (prompt template + issue context)
+   ├── create_comment ✅ — Post comment (supports AI output)
+   ├── send_email     ⬜ — Phase 8
+   └── assign_user    ⬜ — Phase 8
 ```
 
-#### 7.2 Workflow Module
-```bash
-[ ] workflow-template.model.ts
-[ ] workflow-instance.model.ts
-[ ] workflow.controller.ts
-[ ] workflow.service.ts
-[ ] rule-engine.service.ts
-[ ] action-executor.service.ts
-```
+**AI Agent = 1 tool trong Workflow pipeline** (không phải trung tâm).
+Kết quả step trước chảy vào step sau qua `previousResult`.
 
-#### 7.3 Workflow Engine Logic
-```typescript
-export class WorkflowService {
-  async executeWorkflow(instanceId: string): Promise<void> {
-    const instance = await WorkflowInstance.findByPk(instanceId, {
-      include: [WorkflowTemplate],
-    });
-    
-    const { steps } = instance.template;
-    
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i];
-      
-      await this.logStepStart(instance.id, i, step.name);
-      
-      try {
-        // Execute step based on type
-        const result = await this.executeStep(step, instance.input_data);
-        
-        await this.logStepComplete(instance.id, i, result);
-        
-        // Check onSuccess/onFailure
-        if (step.onSuccess) {
-          i = step.onSuccess - 1; // Jump to next step
-        }
-      } catch (error) {
-        await this.logStepFailed(instance.id, i, error);
-        
-        if (step.onFailure) {
-          i = step.onFailure - 1;
-        } else {
-          throw error; // Stop workflow
-        }
-      }
-    }
-    
-    await instance.update({ status: 'completed' });
-  }
+### Actual Implementation
+
+#### 7.1 Database (Migration Batch 5)
+- [x] `workflows` — Automation rules (trigger_type, scope org/project)
+- [x] `workflow_steps` — Actions/conditions (self-ref branching)
+- [x] `workflow_runs` — Execution logs (status, duration, JSON logs)
+
+#### 7.2 Models
+- [x] `Workflow` — name, trigger_type, is_active, org/project scope
+- [x] `WorkflowStep` — type (action/condition/delay), action_type, config JSON, order
+- [x] `WorkflowRun` — status (pending→running→success/failed), logs, duration_ms
+
+#### 7.3 Trigger System
+- [x] `WorkflowTriggerService` (extends EventEmitter) — Singleton
+- [x] Events: `issue_created`, `issue_updated`, `comment_created`
+- [x] `IssueService` emit events after create/update
+
+#### 7.4 Executor & Actions
+- [x] `WorkflowExecutor` — Step-by-step execution with context passing
+- [x] `update_issue` action — Update issue fields from config
+- [x] `call_ai` action — Load Agent → interpolate prompt → call AIOrchestrator
+- [x] `create_comment` action — Post comment (supports `use_previous_result` from call_ai)
+
+#### 7.5 API Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST   | `/:orgId/workflows` | Create workflow with steps |
+| GET    | `/:orgId/workflows` | List workflows |
+| GET    | `/:orgId/workflows/:id` | Get workflow detail |
+| PATCH  | `/:orgId/workflows/:id` | Update workflow |
+| DELETE | `/:orgId/workflows/:id` | Delete workflow |
+
+#### 7.6 Example Pipeline
+```json
+{
+  "name": "AI Review on Issue Created",
+  "trigger_type": "issue_created",
+  "steps": [
+    { "order": 1, "action_type": "call_ai", "config": { "agent_id": "xxx", "prompt_template": "Analyze: {{title}}" } },
+    { "order": 2, "action_type": "create_comment", "config": { "use_previous_result": true, "author_label": "🤖 PM" } },
+    { "order": 3, "action_type": "update_issue", "config": { "priority": "high" } }
+  ]
 }
 ```
 
-#### 7.4 Workflow Triggers
-```bash
-[ ] Manual trigger (button click)
-[ ] Event-based trigger (issue created, task completed)
-[ ] Scheduled trigger (cron jobs - optional)
-[ ] AI-triggered (agent completes action - optional)
-```
-
-#### 7.5 Frontend Workflow Builder
-```bash
-[ ] Workflow template designer (drag-drop - optional)
-[ ] Workflow list
-[ ] Workflow instance status viewer
-[ ] Manual trigger button
-```
-
-### Verification
-
-- [ ] Workflow templates can be created
-- [ ] POST /api/workflows/:id/trigger starts instance
-- [ ] Workflow executes steps in order
-- [ ] Step results logged
-- [ ] Error handling works (onFailure)
-- [ ] Event triggers work (e.g., issue created → workflow)
-- [ ] Frontend: Workflow list displays
-- [ ] Frontend: Manual trigger works
-- [ ] Frontend: Instance status updates
+### Verification ✅
+- [x] Workflow CRUD via API (validated with Zod)
+- [x] Event triggers work (issue_created → workflow auto-runs)
+- [x] Steps execute in order with context passing
+- [x] Issue auto-updated by workflow (tested: To Do → Done)
+- [x] Execution logs stored in workflow_runs
+- [ ] Frontend: Workflow builder UI (Phase 8)
 
 ---
 
@@ -817,39 +746,47 @@ export class WorkflowService {
 ## Module Implementation Order
 
 ```
-Phase 1: Infrastructure
-├── Monorepo setup
-├── Database connection
-└── Docker environment
+Phase 1: Infrastructure                         ✅ DONE
+├── Monorepo setup (pnpm workspace)
+├── Database connection (MySQL + Sequelize)
+└── Shared utilities (Logger, Error Handler, Validation)
 
-Phase 2: Authentication
-└── JWT auth system
+Phase 2: Authentication                          ✅ DONE
+└── JWT auth (register, login, refresh, me)
 
-Phase 3: Multi-tenant
-├── Organizations
-└── Members
+Phase 3: Multi-tenant                            ✅ DONE
+├── Organizations (CRUD)
+├── Members (invite, roles)
+└── Tenant isolation middleware
 
-Phase 4: Core Project Management
-├── Projects
-├── Issues
-├── Tasks
-└── Comments
+Phase 4: Project Management Core                 ✅ DONE
+├── Projects (CRUD + workflow statuses)
+├── Issues (CRUD + filters + ordering)
+├── Project Members
+└── Workflow Statuses (Kanban columns)
 
-Phase 5: Knowledge Base
-├── Documents
-└── Vector embeddings (Chroma)
+Phase 5: Collaboration & Knowledge Base          ✅ DONE
+├── Comments (threaded)
+├── Labels (org-scoped, many-to-many)
+└── Documents (tree hierarchy, rich text)
 
-Phase 6: AI Intelligence
-├── AI Agents
-└── Chat with RAG
+Phase 6: AI Agents & Chat                        ✅ DONE
+├── Multi-provider (OpenAI + Gemini)
+├── AI Orchestrator (centralized LLM)
+├── Agent CRUD + system prompts
+└── Chat with message history
 
-Phase 7: Automation
-└── Workflow Engine
+Phase 7: Workflow Engine (Workflow-Centric)       ✅ DONE
+├── Workflows (rules + steps)
+├── Trigger system (EventEmitter)
+├── Executor (step-by-step + context passing)
+└── Actions: update_issue, call_ai, create_comment
 
-Phase 8: Production Ready
-├── Dashboard
-├── Tests
-├── Security
+Phase 8: Frontend + Polish                       ⬜ NEXT
+├── Frontend implementation (React/Next.js)
+├── Dashboard & Analytics
+├── RAG pipeline (ChromaDB)
+├── Testing & Security
 └── Deployment
 ```
 
@@ -978,15 +915,22 @@ NEXT_PUBLIC_API_URL=https://api.workflowhub.com
 
 ## Critical Path
 
-**Minimum MVP để test end-to-end:**
-1. Auth (login)
-2. Organizations (create org)
-3. Projects (create project)
-4. Documents (upload docs)
-5. Embeddings (process docs)
-6. Chat with AI (query docs)
+**Backend MVP — COMPLETED ✅ (Actual: ~2 tuần)**
+1. ✅ Auth (register, login, JWT refresh)
+2. ✅ Organizations (create, members, roles)
+3. ✅ Projects (CRUD, workflow statuses)
+4. ✅ Issues (CRUD, filters, ordering)
+5. ✅ Collaboration (comments, labels, documents)
+6. ✅ AI Chat (multi-provider, orchestrator)
+7. ✅ Workflow Engine (triggers, executor, AI actions)
 
-**Total time:** ~4-6 tuần cho critical path MVP
+**Frontend MVP — NEXT:**
+1. Layout system + Auth pages
+2. Organization & Project UI
+3. Issue Board (Kanban)
+4. AI Chat interface
+5. Workflow builder
+6. Dashboard & Analytics
 
 ---
 
@@ -1018,5 +962,7 @@ NEXT_PUBLIC_API_URL=https://api.workflowhub.com
 
 ---
 
-*Document Version: 1.0*  
-*Last Updated: 2026-02-13*
+*Document Version: 2.0*  
+*Last Updated: 2026-02-13*  
+*Backend Phases 1-7: COMPLETED*  
+*Next: Frontend Implementation*

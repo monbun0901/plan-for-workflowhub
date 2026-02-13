@@ -1,7 +1,9 @@
 # Phase 2: AI & Automation (Intelligent Execution)
 
-**Status:** 🏗️ Design In Progress  
-**Timeline:** Dự kiến 6-8 tuần
+**Status:** 🔄 Backend Complete, Workflow-Centric Architecture  
+**Timeline:** Dự kiến 6-8 tuần → Actual: ~3 ngày (backend)
+
+> **🏛️ Quyết định kiến trúc:** Hướng **Workflow-Centric** — AI Agent là 1 "tool" trong Workflow pipeline, không phải trung tâm. Workflow là automation chính, AI chỉ là 1 action trong pipeline.
 
 ---
 
