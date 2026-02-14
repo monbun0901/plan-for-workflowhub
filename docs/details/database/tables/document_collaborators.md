@@ -1,7 +1,7 @@
 # document_collaborators Table
 
 **Type:** Junction Table (Document ↔ User)  
-**Tenant Isolation:** ✅ Required (`organization_id`)
+**Tenant Isolation:** N/A (Single-Tenant)
 
 ---
 
@@ -11,23 +11,15 @@
 CREATE TABLE document_collaborators (
   document_id     VARCHAR(36) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
   user_id         VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  organization_id VARCHAR(36) NOT NULL REFERENCES organizations(id),
   
-  role            ENUM('editor', 'viewer') DEFAULT 'viewer',
-  invited_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  role            ENUM('viewer', 'editor', 'admin') DEFAULT 'viewer',
+  assigned_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
   PRIMARY KEY (document_id, user_id),
   INDEX idx_user (user_id),
-  INDEX idx_document (document_id)
+  INDEX idx_doc (document_id)
 );
 ```
-
----
-
-## 🎯 Purpose
-Quản lý quyền truy cập và những người cùng tham gia biên soạn/theo dõi tài liệu.
-
-**Lưu ý:** `created_by` trong bảng `documents` vẫn giữ vai trò là "Owner" (Chủ sở hữu).
 
 ---
 
@@ -47,10 +39,10 @@ User.belongsToMany(Document, {
   through: 'document_collaborators',
   foreignKey: 'user_id',
   otherKey: 'document_id',
-  as: 'sharedDocuments'
+  as: 'collaborationDocuments'
 });
 ```
 
 ---
 
-*Last Updated: 2026-02-11*
+*Last Updated: 2026-02-15*

@@ -1,4 +1,4 @@
-# document_categories Table
+# member_categories Table
 
 **Type:** Master Table (Metadata)  
 **Tenant Isolation:** N/A (Single-Tenant)
@@ -8,10 +8,10 @@
 ## 📋 Schema
 
 ```sql
-CREATE TABLE document_categories (
+CREATE TABLE member_categories (
   id              VARCHAR(36) PRIMARY KEY,
   
-  name            VARCHAR(100) NOT NULL,
+  name            VARCHAR(100) NOT NULL, -- Ví dụ: "Quản lý", "Kỹ thuật", "HR"
   description     TEXT,
   order_index     INT DEFAULT 0,
   
@@ -25,12 +25,12 @@ CREATE TABLE document_categories (
 ## 🔗 Associations (Sequelize)
 
 ```typescript
-// models/document-category.model.ts
-DocumentCategory.belongsToMany(Document, {
-  through: 'document_category_mappings',
+// models/member-category.model.ts
+MemberCategory.belongsToMany(User, {
+  through: 'member_category_mappings',
   foreignKey: 'category_id',
-  otherKey: 'document_id',
-  as: 'documents'
+  otherKey: 'user_id',
+  as: 'users'
 });
 ```
 

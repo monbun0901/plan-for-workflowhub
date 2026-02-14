@@ -1,0 +1,41 @@
+# issue_statuses Table
+
+**Type:** Lookup Table (Metadata)  
+**Tenant Isolation:** N/A (Single-Tenant)
+
+---
+
+## 📋 Schema
+
+```sql
+CREATE TABLE issue_statuses (
+  id              VARCHAR(36) PRIMARY KEY,
+  
+  name            VARCHAR(50) NOT NULL, -- Ví dụ: "Open", "Triaged", "Fixed", "Closed"
+  description     TEXT,
+  order_index     INT DEFAULT 0,
+  
+  state_type      ENUM('todo', 'in_progress', 'done', 'closed') NOT NULL,
+  
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_order (order_index)
+);
+```
+
+---
+
+## 🔗 Associations (Sequelize)
+
+```typescript
+// models/issue-status.model.ts
+IssueStatus.hasMany(Issue, {
+  foreignKey: 'status_id',
+  as: 'issues'
+});
+```
+
+---
+
+*Last Updated: 2026-02-15*

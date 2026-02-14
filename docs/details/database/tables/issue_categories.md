@@ -1,7 +1,7 @@
 # issue_categories Table
 
-**Type:** Junction Table (Issue ↔ Category)  
-**Tenant Isolation:** ✅ Required (`organization_id`)
+**Type:** Master Table (Metadata)  
+**Tenant Isolation:** N/A (Single-Tenant)
 
 ---
 
@@ -9,35 +9,31 @@
 
 ```sql
 CREATE TABLE issue_categories (
-  issue_id        VARCHAR(36) NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
-  category_id     VARCHAR(36) NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-  organization_id VARCHAR(36) NOT NULL REFERENCES organizations(id),
+  id              VARCHAR(36) PRIMARY KEY,
   
-  PRIMARY KEY (issue_id, category_id),
-  INDEX idx_category (category_id),
-  INDEX idx_issue (issue_id)
+  name            VARCHAR(100) NOT NULL,
+  description     TEXT,
+  order_index     INT DEFAULT 0,
+  
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 ```
-
----
-
-## 🎯 Purpose
-Cho phép một Issue được gắn vào nhiều danh mục phân loại.
 
 ---
 
 ## 🔗 Associations (Sequelize)
 
 ```typescript
-// models/issue.model.ts
-Issue.belongsToMany(Category, {
-  through: 'issue_categories',
-  foreignKey: 'issue_id',
-  otherKey: 'category_id',
-  as: 'categories'
+// models/issue-category.model.ts
+IssueCategory.belongsToMany(Issue, {
+  through: 'issue_category_mappings',
+  foreignKey: 'category_id',
+  otherKey: 'issue_id',
+  as: 'issues'
 });
 ```
 
 ---
 
-*Last Updated: 2026-02-11*
+*Last Updated: 2026-02-15*

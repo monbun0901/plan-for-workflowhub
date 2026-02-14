@@ -1,7 +1,7 @@
 # roles Table
 
 **Type:** Lookup Table (Identity & Access)  
-**Tenant Isolation:** ✅ Required (`organization_id`)
+**Tenant Isolation:** N/A (Global roles for the single organization)
 
 ---
 
@@ -10,30 +10,26 @@
 ```sql
 CREATE TABLE roles (
   id              VARCHAR(36) PRIMARY KEY,
-  organization_id VARCHAR(36) NOT NULL REFERENCES organizations(id),
   
-  name            VARCHAR(50) NOT NULL,          -- 'Admin', 'Developer', 'Viewer'
+  name            VARCHAR(50) UNIQUE NOT NULL,    -- 'Admin', 'Manager', 'Employee', 'Viewer'
   description     TEXT,
   
   -- Logic mapping (System roles)
-  -- Giúp code nhận diện các quyền tối thượng
   is_system       BOOLEAN DEFAULT FALSE,         -- TRUE cho các role mặc định ko được xóa
-  role_type       ENUM('owner', 'admin', 'custom') DEFAULT 'custom',
+  role_type       ENUM('admin', 'manager', 'user', 'viewer') DEFAULT 'user',
   
   -- Fine-grained permissions
-  permissions     JSON,                          -- ['project:create', 'task:edit', 'member:invite']
+  permissions     JSON,                          -- ['project:create', 'task:edit', 'user:invite']
   
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  
-  UNIQUE KEY unique_role_name (organization_id, name)
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 ```
 
 ---
 
 ## 🎯 Purpose
-Cho phép mỗi tổ chức tự định nghĩa các vai trò và bộ quyền (Capabilities) riêng biệt.
+Định nghĩa các vai trò và bộ quyền (Capabilities) cho toàn hệ thống. Vì đây là Boilerplate Single-Tenant, các role này áp dụng cho mọi người dùng trong hệ thống duy nhất.
 
 ---
 
@@ -41,16 +37,16 @@ Cho phép mỗi tổ chức tự định nghĩa các vai trò và bộ quyền (
 ```json
 {
   "permissions": [
-    "org:view",
+    "project:view",
     "project:create",
     "project:delete",
     "issue:manage",
     "task:assign",
-    "billing:manage"
+    "user:manage"
   ]
 }
 ```
 
 ---
 
-*Last Updated: 2026-02-11*
+*Last Updated: 2026-02-15*

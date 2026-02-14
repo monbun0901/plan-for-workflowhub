@@ -1,7 +1,7 @@
 # task_categories Table
 
-**Type:** Junction Table (Task ↔ Category)  
-**Tenant Isolation:** ✅ Required (`organization_id`)
+**Type:** Master Table (Metadata)  
+**Tenant Isolation:** N/A (Single-Tenant)
 
 ---
 
@@ -9,40 +9,25 @@
 
 ```sql
 CREATE TABLE task_categories (
-  task_id         VARCHAR(36) NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  category_id     VARCHAR(36) NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-  organization_id VARCHAR(36) NOT NULL REFERENCES organizations(id),
+  id              VARCHAR(36) PRIMARY KEY,
   
-  PRIMARY KEY (task_id, category_id),
-  INDEX idx_category (category_id),
-  INDEX idx_task (task_id)
+  name            VARCHAR(100) NOT NULL,
+  description     TEXT,
+  order_index     INT DEFAULT 0,
+  
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 ```
-
----
-
-## 🎯 Purpose
-Cho phép một Task thuộc về nhiều danh mục khác nhau (Multi-categorization).
-
-**Ví dụ:**
-Một Task "Fix CSS Bug" có thể thuộc cả 2 category: **"Frontend"** và **"Urgent Fix"**.
 
 ---
 
 ## 🔗 Associations (Sequelize)
 
 ```typescript
-// models/task.model.ts
-Task.belongsToMany(Category, {
-  through: 'task_categories',
-  foreignKey: 'task_id',
-  otherKey: 'category_id',
-  as: 'categories'
-});
-
-// models/category.model.ts
-Category.belongsToMany(Task, {
-  through: 'task_categories',
+// models/task-category.model.ts
+TaskCategory.belongsToMany(Task, {
+  through: 'task_category_mappings',
   foreignKey: 'category_id',
   otherKey: 'task_id',
   as: 'tasks'
@@ -51,20 +36,4 @@ Category.belongsToMany(Task, {
 
 ---
 
-## 🎯 Common Queries
-
-### Find all tasks with specific categories (In query)
-
-```typescript
-const tasks = await Task.findAll({
-  include: [{
-    model: Category,
-    as: 'categories',
-    where: { id: [catId1, catId2] }
-  }]
-});
-```
-
----
-
-*Last Updated: 2026-02-11*
+*Last Updated: 2026-02-15*

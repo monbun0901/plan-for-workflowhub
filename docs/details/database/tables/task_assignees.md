@@ -1,7 +1,7 @@
 # task_assignees Table
 
 **Type:** Junction Table (Task ↔ User)  
-**Tenant Isolation:** ✅ Required (`organization_id`)
+**Tenant Isolation:** N/A (Single-Tenant)
 
 ---
 
@@ -11,7 +11,6 @@
 CREATE TABLE task_assignees (
   task_id         VARCHAR(36) NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   user_id         VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  organization_id VARCHAR(36) NOT NULL REFERENCES organizations(id),
   
   assigned_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
@@ -20,14 +19,6 @@ CREATE TABLE task_assignees (
   INDEX idx_task (task_id)
 );
 ```
-
----
-
-## 🎯 Purpose
-Cho phép một Task được thực hiện bởi một nhóm người (Multi-assignee). 
-
-**Ví dụ:** 
-Một task "Viết Unit Test cho Auth Module" có thể được giao cho 2 Developer cùng phối hợp làm.
 
 ---
 
@@ -53,16 +44,4 @@ User.belongsToMany(Task, {
 
 ---
 
-## 🎯 Common Queries
-
-### Get all workers of a task
-
-```typescript
-const task = await Task.findByPk(taskId, {
-  include: [{ model: User, as: 'assignees' }]
-});
-```
-
----
-
-*Last Updated: 2026-02-11*
+*Last Updated: 2026-02-15*

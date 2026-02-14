@@ -1,4 +1,4 @@
-# document_categories Table
+# project_categories Table
 
 **Type:** Master Table (Metadata)  
 **Tenant Isolation:** N/A (Single-Tenant)
@@ -8,7 +8,7 @@
 ## 📋 Schema
 
 ```sql
-CREATE TABLE document_categories (
+CREATE TABLE project_categories (
   id              VARCHAR(36) PRIMARY KEY,
   
   name            VARCHAR(100) NOT NULL,
@@ -25,12 +25,12 @@ CREATE TABLE document_categories (
 ## 🔗 Associations (Sequelize)
 
 ```typescript
-// models/document-category.model.ts
-DocumentCategory.belongsToMany(Document, {
-  through: 'document_category_mappings',
+// models/project-category.model.ts
+ProjectCategory.belongsToMany(Project, {
+  through: 'project_category_mappings',
   foreignKey: 'category_id',
-  otherKey: 'document_id',
-  as: 'documents'
+  otherKey: 'project_id',
+  as: 'projects'
 });
 ```
 

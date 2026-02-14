@@ -1,7 +1,7 @@
 # issue_assignees Table
 
 **Type:** Junction Table (Issue ↔ User)  
-**Tenant Isolation:** ✅ Required (`organization_id`)
+**Tenant Isolation:** N/A (Single-Tenant)
 
 ---
 
@@ -11,7 +11,6 @@
 CREATE TABLE issue_assignees (
   issue_id        VARCHAR(36) NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
   user_id         VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  organization_id VARCHAR(36) NOT NULL REFERENCES organizations(id),
   
   assigned_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
@@ -20,11 +19,6 @@ CREATE TABLE issue_assignees (
   INDEX idx_issue (issue_id)
 );
 ```
-
----
-
-## 🎯 Purpose
-Cho phép một Issue được xử lý bởi một nhóm người (Multi-assignee). Phù hợp cho các vấn đề phức tạp cần sự phối hợp giữa nhiều bộ phận.
 
 ---
 
@@ -50,16 +44,4 @@ User.belongsToMany(Issue, {
 
 ---
 
-## 🎯 Common Queries
-
-### Get all assignees of an issue
-
-```typescript
-const issue = await Issue.findByPk(issueId, {
-  include: [{ model: User, as: 'assignees' }]
-});
-```
-
----
-
-*Last Updated: 2026-02-11*
+*Last Updated: 2026-02-15*

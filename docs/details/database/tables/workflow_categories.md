@@ -1,4 +1,4 @@
-# document_categories Table
+# workflow_categories Table
 
 **Type:** Master Table (Metadata)  
 **Tenant Isolation:** N/A (Single-Tenant)
@@ -8,7 +8,7 @@
 ## 📋 Schema
 
 ```sql
-CREATE TABLE document_categories (
+CREATE TABLE workflow_categories (
   id              VARCHAR(36) PRIMARY KEY,
   
   name            VARCHAR(100) NOT NULL,
@@ -25,12 +25,12 @@ CREATE TABLE document_categories (
 ## 🔗 Associations (Sequelize)
 
 ```typescript
-// models/document-category.model.ts
-DocumentCategory.belongsToMany(Document, {
-  through: 'document_category_mappings',
+// models/workflow-category.model.ts
+WorkflowCategory.belongsToMany(WorkflowTemplate, {
+  through: 'workflow_category_mappings',
   foreignKey: 'category_id',
-  otherKey: 'document_id',
-  as: 'documents'
+  otherKey: 'workflow_id',
+  as: 'workflows'
 });
 ```
 
