@@ -43,14 +43,14 @@ Khả năng chuyển đổi linh hoạt giữa các model mà không làm thay �
 
 ### 4. Logging & Monitoring
 *   Lưu toàn bộ Input/Output (trừ dữ liệu nhạy cảm) để Audit.
-*   Theo dõi `latency` (độ trễ) và `token usage` của từng Organization.
+*   Theo dõi `latency` (độ trễ) và `token usage` để kiểm soát hiệu năng.
 
 ---
 
 ## 🔒 Security
 
 *   **Prompt Injection Protection:** Lọc và kiểm tra các ký tự lạ hoặc các yêu cầu cố tình phá vỡ System Prompt.
-*   **API Key Management:** Toàn bộ API keys của OpenAI/Claude được lưu an toàn tại Environment Variables phía Backend, không bao giờ lộ ra Frontend.
+*   **API Key Management:** Toàn bộ API keys của OpenAI/Claude/Ollama được lưu an toàn tại Environment Variables phía Backend.
 
 ---
 
@@ -71,15 +71,13 @@ Chúng ta kết nối WorkflowHub Backend với OpenClaw Server thông qua **Web
 Khi nhận yêu cầu, WH Backend đóng vai trò là "Provider" cho OpenClaw:
 *   **Context Injection:** Gửi kèm tri thức từ RAG Service của WorkflowHub vào OpenClaw Prompt.
 *   **Tool Mapping:** Map các Tools của WorkflowHub (create_task, search_wiki) vào danh sách "Capabilities" của OpenClaw.
-*   **Event Routing:** Kết nối sự kiện từ Discord (nếu có) về hệ thống thông báo của WorkflowHub.
 
 ### 3. Benefits for WorkflowHub
-*   **Multi-Platform:** Đồng bộ hóa trải nghiệm chat giữa Web App và Discord Bot.
-*   **Advanced Reasoning:** Tận dụng khả năng tự suy nghĩ các bước thực hiện (Task decomposition) có sẵn của OpenClaw.
-*   **Ecosystem Access:** Sử dụng ngay các tích hợp sẵn có của OpenClaw (GitHub, Gmail, Calendar).
+*   **Multi-Platform:** Đồng bộ hóa trải nghiệm chat giữa Web App và các kênh khác như Discord/Telegram nếu cần.
+*   **Advanced Reasoning:** Tận dụng khả năng tự suy nghĩ các bước thực hiện (Task decomposition).
 
 ### 4. Dynamic Agent Injection (No-Config Implementation)
-Để hỗ trợ Multi-tenant, chúng ta không dùng file cấu hình `.openclaw` tĩnh. Thay vào đó, Backend sẽ "bơm" cấu hình trực tiếp qua WebSocket:
+Backend sẽ "bơm" cấu hình trực tiếp qua WebSocket dựa trên Database:
 
 *   **Payload structure:** Mỗi request gửi sang OpenClaw sẽ bao gồm một `agent_manifest`:
     ```json
@@ -87,14 +85,14 @@ Khi nhận yêu cầu, WH Backend đóng vai trò là "Provider" cho OpenClaw:
       "session_id": "...",
       "agent_config": {
         "system_prompt": "Defined in WH Database",
-        "model": "gpt-4o",
+        "model": "llama3", // Or gpt-4o
         "tools": ["create_task", "search_wiki"],
         "rag_context": "Relevant text chunks from WH RAG Service"
       },
       "message": "User's current query"
     }
     ```
-*   **Stateless Engine:** OpenClaw Engine đóng vai trò là một "bộ xử lý thuần túy", nhận cấu hình từ WorkflowHub, thực thi và trả kết quả, không giữ cấu hình cố định trong file cục bộ.
+*   **Stateless Engine:** OpenClaw Engine đóng vai trò là một "bộ xử lý thuần túy", nhận cấu hình từ WorkflowHub, thực thi và trả kết quả.
 
 ---
 
@@ -107,7 +105,7 @@ async handleChatMessage(chatId, message) {
   
   // 2. Get Context (RAG + Redis)
   const [knowledge, history] = await Promise.all([
-    ragService.query(message, orgId),
+    ragService.queryKnowledge(message), // No orgId needed
     redis.getHistory(chatId)
   ]);
   

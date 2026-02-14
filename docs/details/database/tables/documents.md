@@ -27,9 +27,9 @@ CREATE TABLE documents (
   created_by      VARCHAR(36) NOT NULL REFERENCES users(id),
   updated_by      VARCHAR(36) REFERENCES users(id),
   
-  -- Vector embedding for RAG
-  embedding_status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
-  last_embedded_at TIMESTAMP,
+  -- AI Knowledge Tracking (for ChromaDB Integration)
+  embedding_status  ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
+  last_embedded_at  TIMESTAMP,
   
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

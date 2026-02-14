@@ -22,8 +22,8 @@ CREATE TABLE agents (
   system_prompt   TEXT NOT NULL,           -- "Hướng dẫn hành vi" cho Agent
   
   -- Flexible Configuration
-  -- Lưu temperature, max_tokens, stop_sequences, hoặc các params đặc thù của Local LLM
-  ai_settings     JSON,                    
+  ai_settings     JSON,                    -- Lưu temperature, max_tokens...
+  rag_config      JSON,                    -- Thiết lập RAG (Top K, Chunk size, Vector search)
   
   status          ENUM('active', 'disabled') DEFAULT 'active',
   
@@ -34,18 +34,8 @@ CREATE TABLE agents (
 
 ---
 
-## 🔗 Related Table: agent_documents (RAG Knowledge)
-Bảng trung gian để nạp tài liệu nội bộ cho Agent.
-
-```sql
-CREATE TABLE agent_documents (
-  agent_id        VARCHAR(36) NOT NULL REFERENCES agents(id),
-  document_id     VARCHAR(36) NOT NULL REFERENCES documents(id),
-  PRIMARY KEY (agent_id, document_id)
-);
-```
-
----
+## 🔗 Knowledge Base
+Agent truy xuất tri thức nội bộ thông qua bảng trung gian **[agent_documents](./agent_documents.md)**.
 
 ## 🎯 Purpose
 Bảng này đóng vai trò là một **Danh mục (Registry)** các AI Agents khả dụng cho hệ thống/dự án.

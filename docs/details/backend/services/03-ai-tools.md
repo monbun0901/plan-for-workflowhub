@@ -35,7 +35,7 @@ Mỗi công cụ (Tool) sẽ được định nghĩa là một JSON Schema để
 Dùng cho Agent vai trò PM hoặc Developer để điều phối công việc.
 
 *   **`create_task`**: Tạo nhiệm vụ mới.
-    *   Params: `project_id`, `name`, `priority`, `due_date`.
+    *   Params: `project_id`, `name`, `status_id`, `description`.
 *   **`update_task_status`**: Thay đổi trạng thái task.
     *   Params: `task_id`, `status_id`.
 *   **`assign_issue`**: Chỉ định người xử lý issue.
@@ -47,7 +47,7 @@ Dùng để truy xuất dữ liệu ngoài phạm vi RAG cung cấp.
 *   **`get_document_content`**: Đọc toàn bộ nội dung của một tài liệu cụ thể.
     *   Params: `document_id`.
 *   **`list_project_issues`**: Lấy danh sách issue của một dự án.
-    *   Params: `project_id`, `status`.
+    *   Params: `project_id`, `status_id`.
 
 ---
 
@@ -57,8 +57,8 @@ AI Gateway **KHÔNG** tự thực thi hàm. Nó chỉ trả về yêu cầu: *"T
 
 **Quy trình thực thi an toàn tại Backend:**
 
-1.  **Permission Check:** Trước khi chạy hàm `update_task_status`, Backend phải kiểm tra `req.organization.permissions` xem người dùng (người đang chat) có quyền đó không.
-2.  **Input Validation:** Sử dụng **Zod** để validate tham số AI gửi về (tránh việc AI gửi tham số linh tinh làm crash server).
+1.  **Permission Check:** Trước khi chạy hàm `update_task_status`, Backend phải kiểm tra `user.permissions` xem người dùng (người đang chat) có quyền đó không.
+2.  **Input Validation:** Sử dụng **Zod** để validate tham số AI gửi về.
 3.  **Audit Log:** Mọi hành động AI thực hiện thông qua Tool phải được ghi lại: *"Agent PM đã tạo Task X dựa trên yêu cầu của User Y"*.
 
 ---
@@ -70,14 +70,14 @@ AI Gateway **KHÔNG** tự thực thi hàm. Nó chỉ trả về yêu cầu: *"T
   "type": "function",
   "function": {
     "name": "create_workflow_task",
-    "description": "Tạo một task mới trong project hiện tại khi có yêu cầu từ người dùng hoặc theo quy trình",
+    "description": "Tạo một task mới trong project hiện tại",
     "parameters": {
       "type": "object",
       "properties": {
         "project_id": { "type": "string", "format": "uuid" },
         "name": { "type": "string", "description": "Tiêu đề ngắn gọn của task" },
-        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
-        "description": { "type": "string", "description": "Mô tả chi tiết công việc" }
+        "description": { "type": "string", "description": "Mô tả chi tiết công việc" },
+        "status_id": { "type": "string", "description": "ID trạng thái từ bảng task_statuses" }
       },
       "required": ["project_id", "name"]
     }

@@ -109,7 +109,6 @@ interface ChromaDocument {
   
   // Metadata (filterable)
   metadatas: {
-    organization_id: string;   // 🔒 MANDATORY - tenant isolation
     project_id: string | null; // Scope narrowing
     document_id: string;       // Source reference
     document_title: string;    // For citation display
@@ -165,56 +164,6 @@ const CHUNKING_CONFIG = {
 };
 ```
 
-### Chunking Flow
-
-```
-Input Document (LONGTEXT)
-    │
-    ▼
-┌──────────────────────┐
-│ 1. Clean Content     │  Remove HTML tags, normalize whitespace
-│                      │  Keep markdown headers as context
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ 2. Split by Headers  │  First split by ## and ### 
-│    (Semantic Split)  │  Preserves topic boundaries
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ 3. Sub-split         │  If section > CHUNK_SIZE
-│    (Size Split)      │  Split by paragraphs → sentences
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ 4. Add Overlap       │  Last 80 chars from prev chunk
-│                      │  prepended to current chunk
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ 5. Enrich Metadata   │  Attach org_id, project_id, etc.
-│                      │  Prefix with document title
-└──────────────────────┘
-           │
-           ▼
-      Chunk[]  →  Embedding  →  ChromaDB
-```
-
-### Title Prefixing
-
-Mỗi chunk sẽ có prefix `[Document: {title}]` để embedding hiểu context:
-
-```
-[Document: API Authentication Guide]
-## JWT Token Flow
-
-When a user logs in, the server generates...
-```
-
 ---
 
 ## 🧮 Embedding Layer
@@ -243,104 +192,29 @@ class EmbeddingService {
 }
 ```
 
-### Provider Comparison
-
-| Feature | nomic-embed-text (Ollama) | text-embedding-3-small (OpenAI) |
-|---------|--------------------------|--------------------------------|
-| **Dimensions** | 768 | 1536 |
-| **Cost** | Free (local) | $0.02 / 1M tokens |
-| **Speed** | ~50ms/chunk (GPU), ~200ms (CPU) | ~100ms/chunk (network) |
-| **Quality** | Good for general text | Better for nuanced queries |
-| **Offline** | ✅ Yes | ❌ No |
-| **Batch Size** | 32 chunks | 2048 chunks |
-
-### Ollama Setup
-
-```bash
-# Pull embedding model
-ollama pull nomic-embed-text
-
-# Verify
-curl http://localhost:11434/api/embeddings \
-  -d '{"model": "nomic-embed-text", "prompt": "test"}'
-```
-
-### Dimension Strategy
-
-> ⚠️ **CRITICAL:** Không được mix dimensions trong cùng 1 collection.
-
-- **MVP:** Chọn **1 provider** và stick with it
-- **Recommendation:** `nomic-embed-text` (768d) → free, fast, local
-- **Migration:** Nếu switch provider → re-embed toàn bộ collection
-
 ---
 
-## 🔒 Tenant Isolation
+## 🔒 Scope & Filtering
 
-### Mandatory Filter Pattern
+### Agent-Scoped Query Pattern
 
 ```typescript
 /**
- * EVERY query MUST include organization_id filter
- * @description Prevents cross-tenant data leakage
+ * Query MUST include document filters based on Agent access
  */
-const MANDATORY_FILTER = {
-  organization_id: { $eq: req.orgId }
-};
-
-// ✅ CORRECT - Always filter by org
 const results = await collection.query({
   queryEmbeddings: [queryVector],
   where: {
-    organization_id: req.orgId,         // 🔒 MANDATORY
-    project_id: projectId || undefined  // Optional scope
+    document_id: { $in: allowedDocIds }, // 🔒 REQUIRED - Agent knowledge scope
+    project_id: projectId || undefined   // Optional scope
   },
   nResults: 10,
 });
-
-// ❌ WRONG - NEVER query without org filter
-const results = await collection.query({
-  queryEmbeddings: [queryVector],
-  nResults: 10,
-  // Missing organization_id = SECURITY BREACH
-});
-```
-
-### Query Scoping Levels
-
-```
-Level 1: Organization-wide (tìm trong toàn org)
-  where: { organization_id: "org-123" }
-
-Level 2: Project-scoped (tìm trong 1 project)
-  where: { 
-    $and: [
-      { organization_id: "org-123" },
-      { project_id: "proj-456" }
-    ]
-  }
-
-Level 3: Document-specific (tìm trong 1 doc)
-  where: {
-    $and: [
-      { organization_id: "org-123" },
-      { document_id: "doc-789" }
-    ]
-  }
 ```
 
 ---
 
 ## 🔄 Sync Pipeline (MySQL ↔ ChromaDB)
-
-### Trigger Events
-
-| Event | Action | Timing |
-|-------|--------|--------|
-| Document created | Chunk + embed + insert | Async (BullMQ job) |
-| Document content updated | Delete old chunks + re-embed | Async |
-| Document deleted | Delete all chunks | Async |
-| Document version changed | Re-embed with new version | Async |
 
 ### Sync Service
 
@@ -358,23 +232,7 @@ class VectorSyncService {
     // 1. Fetch document from MySQL
     const doc = await documentRepo.findById(documentId);
     
-    // 2. Update embedding status
-    await documentRepo.update(documentId, { 
-      embedding_status: 'processing' 
-    });
-    
-    // 3. Delete old chunks (if re-indexing)
-    await this.deleteDocumentChunks(documentId);
-    
-    // 4. Chunk content
-    const chunks = this.chunker.split(doc.content, {
-      title: doc.title,
-    });
-    
-    // 5. Generate embeddings
-    const embeddings = await this.embeddingService.embed(
-      chunks.map(c => c.text)
-    );
+    // ... logic ...
     
     // 6. Upsert to ChromaDB
     await this.collection.upsert({
@@ -382,7 +240,6 @@ class VectorSyncService {
       documents: chunks.map(c => c.text),
       embeddings: embeddings,
       metadatas: chunks.map((c, i) => ({
-        organization_id: doc.organization_id,
         project_id: doc.project_id || '',
         document_id: documentId,
         document_title: doc.title,
@@ -400,54 +257,7 @@ class VectorSyncService {
       last_embedded_at: new Date(),
     });
   }
-  
-  /**
-   * Delete all chunks for a document
-   * @param {string} documentId
-   */
-  async deleteDocumentChunks(documentId) {
-    const existing = await this.collection.get({
-      where: { document_id: documentId },
-    });
-    
-    if (existing.ids.length > 0) {
-      await this.collection.delete({ ids: existing.ids });
-    }
-  }
 }
-```
-
-### Background Job (BullMQ)
-
-```typescript
-// Job definition
-const EMBED_QUEUE = 'document-embedding';
-
-// Producer (in DocumentService)
-async afterDocumentSave(document) {
-  await embeddingQueue.add(EMBED_QUEUE, {
-    documentId: document.id,
-    action: 'ingest',
-  }, {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 2000 },
-    removeOnComplete: 100,
-  });
-}
-
-// Consumer (Worker)
-const embeddingWorker = new Worker(EMBED_QUEUE, async (job) => {
-  const { documentId, action } = job.data;
-  
-  switch (action) {
-    case 'ingest':
-      await vectorSyncService.ingestDocument(documentId);
-      break;
-    case 'delete':
-      await vectorSyncService.deleteDocumentChunks(documentId);
-      break;
-  }
-});
 ```
 
 ---
@@ -460,66 +270,26 @@ const embeddingWorker = new Worker(EMBED_QUEUE, async (job) => {
 /**
  * Query relevant document chunks
  * @param {string} query - User's question
- * @param {string} organizationId - Tenant ID
  * @param {Object} [options] - Query options
  * @returns {Promise<RagResult[]>}
  */
-async queryKnowledge(query, organizationId, options = {}) {
+async queryKnowledge(query, options = {}) {
   const {
+    allowedDocIds = [], // MANDATORY: From agent_documents table
     projectId = null,
     topK = 5,
-    minScore = 0.65,  // Minimum similarity threshold
+    minScore = 0.65,
   } = options;
   
-  // 1. Embed the query
-  const queryEmbedding = await embeddingService.embed([query]);
+  // 1. Embed query...
   
   // 2. Build filter
-  const where = { organization_id: organizationId };
+  const where = { document_id: { $in: allowedDocIds } };
   if (projectId) {
     where.project_id = projectId;
   }
   
-  // 3. Query ChromaDB
-  const results = await collection.query({
-    queryEmbeddings: queryEmbedding,
-    where,
-    nResults: topK,
-    include: ['documents', 'metadatas', 'distances'],
-  });
-  
-  // 4. Filter by similarity score & format
-  return results.ids[0]
-    .map((id, i) => ({
-      id,
-      content: results.documents[0][i],
-      metadata: results.metadatas[0][i],
-      score: 1 - results.distances[0][i], // Chroma returns distance, convert to similarity
-    }))
-    .filter(r => r.score >= minScore)
-    .map(r => ({
-      content: r.content,
-      source: {
-        document_id: r.metadata.document_id,
-        document_title: r.metadata.document_title,
-        chunk_index: r.metadata.chunk_index,
-      },
-      relevance: r.score,
-    }));
-}
-```
-
-### Response Format (to AI Gateway)
-
-```typescript
-interface RagResult {
-  content: string;        // Chunk text
-  source: {
-    document_id: string;
-    document_title: string;
-    chunk_index: number;
-  };
-  relevance: number;      // 0.0 - 1.0
+  // 3. Query ChromaDB...
 }
 ```
 
@@ -527,39 +297,12 @@ interface RagResult {
 
 ## 📊 Monitoring & Health
 
-### Health Check Endpoint
+### Dashboard Metrics
 
 ```typescript
-// GET /api/v1/health/vector
-async checkVectorHealth() {
-  try {
-    const heartbeat = await chromaClient.heartbeat();
-    const collection = await chromaClient.getCollection({ 
-      name: COLLECTION_NAME 
-    });
-    const count = await collection.count();
-    
-    return {
-      status: 'healthy',
-      provider: 'chromadb',
-      version: heartbeat.version,
-      collection: COLLECTION_NAME,
-      totalChunks: count,
-      embeddingModel: config.EMBEDDING_PROVIDER,
-    };
-  } catch (error) {
-    return { status: 'unhealthy', error: error.message };
-  }
-}
-```
-
-### Dashboard Metrics (per Organization)
-
-```typescript
-// GET /api/v1/:orgId/analytics/vector
-async getVectorStats(orgId) {
+// GET /api/v1/analytics/vector
+async getVectorStats() {
   const results = await collection.get({
-    where: { organization_id: orgId },
     include: ['metadatas'],
   });
   
@@ -570,9 +313,6 @@ async getVectorStats(orgId) {
     total_documents: docIds.size,
     avg_chunks_per_doc: results.ids.length / docIds.size,
     embedding_model: config.EMBEDDING_PROVIDER,
-    last_sync: results.metadatas
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
-      ?.created_at,
   };
 }
 ```

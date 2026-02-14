@@ -20,43 +20,41 @@
 ## 📑 Detailed Components
 
 ### 1. Document Ingestor & Chunker
-*   **Trigger:** Khi `documents` được tạo hoặc cập nhật trong MySQL.
+*   **Trigger:** Khi `documents` có `embedding_status = 'pending'`.
 *   **Chunking Strategy:**
     *   Sử dụng `RecursiveCharacterTextSplitter`.
-    *   `chunk_size`: 500 - 1000 characters.
-    *   `chunk_overlap`: 10% (để giữ ngữ cảnh giữa các đoạn).
-*   **Metadata:** Mỗi chunk phải đính kèm:
-    *   `organization_id` (Bắt buộc - dùng để lọc).
-    *   `document_id` (Để dẫn nguồn).
-    *   `project_id` (Để thu hẹp phạm vi tìm kiếm).
+    *   `chunk_size`: 800 characters.
+    *   `chunk_overlap`: 80 characters (10%).
+*   **Metadata (Essential):** Mỗi chunk đính kèm:
+    *   `document_id`: Để dẫn nguồn và xóa/sửa khi tài liệu thay đổi.
+    *   `project_id`: (Optional) Để thu hẹp phạm vi tìm kiếm theo dự án.
 
-### 2. Embedding Layer
-*   **Model:** `text-embedding-3-small` (OpenAI) hoặc `all-MiniLM-L6-v2` (Local).
-*   **Process:** Chuyển văn bản thành vector 1536 chiều (nếu dùng OpenAI).
+### 2. Embedding Layer (Hybrid)
+*   **Primary:** `nomic-embed-text` (Ollama - Local) -> Vector 768 chiều.
+*   **Fallback:** `text-embedding-3-small` (OpenAI) -> Vector 1536 chiều.
+*   *Lưu ý:* Cần chọn 1 loại Dimension cố định cho toàn bộ hệ thống.
 
-### 3. Vector Storage (Vector DB)
-*   **Tech:** ChromaDB (Docker-ready) hoặc Pinecone.
-*   **Isolation:** 
-    *   Sử dụng **Metadata Filtering** trên trường `organization_id`.
-    *   *Mục tiêu:* Tuyệt đối không để AI của Org A tìm thấy tài liệu của Org B.
+### 3. Vector Storage (ChromaDB)
+*   **Tech:** ChromaDB (Self-hosted trên Docker port 8001).
+*   **Isolation:** Không cần `organization_id`. Cô lập tri thức ở tầng Query bằng `agent_documents`.
 
-### 4. Retriever (Bộ truy xuất)
-*   **Similarity Search:** Sử dụng Cosine Similarity để tìm các đoạn văn bản gần nhất với câu hỏi của User.
-*   **Reranking (Optional):** Chỉnh sửa lại thứ tự các đoạn văn bản dựa trên độ phù hợp thực tế trước khi gửi cho AI.
+### 4. Retriever (Bộ truy xuất - Trí nhớ Agent)
+*   **Agent Scoping:** Khi một Agent hỏi, Retriever CHỈ tìm kiếm trong các Document IDs được liệt kê trong bảng `agent_documents`.
+*   **Logic:** `where: { document_id: { $in: [agent_allowed_doc_ids] } }`
 
 ---
 
-## 🔒 Security & Tenant Isolation
+## 🔒 Security & Scope
 
-**MANDATORY QUERY PATTERN:**
-Mọi yêu cầu tìm kiếm phải kèm theo `organization_id`.
+**AGENT-BASED FILTERING:**
+Tuyệt đối không tìm kiếm mù quáng toàn server. AI Agent chỉ được biết những gì nó được "nạp" tri thức.
 
 ```typescript
-// Ví dụ logic tìm kiếm
+// Logic tìm kiếm thực tế
 const results = await vectorDb.query({
   queryVector: userQueryEmbedding,
   filter: {
-    organization_id: req.orgId // BẮT BUỘC
+    document_id: { $in: allowedDocIds } // Lấy từ bảng agent_documents
   },
   topK: 5
 });
