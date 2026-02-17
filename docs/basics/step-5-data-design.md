@@ -128,7 +128,6 @@ CREATE TABLE projects (
   slug            VARCHAR(100) NOT NULL,
   description     TEXT,
   status          ENUM('active', 'archived', 'deleted') DEFAULT 'active',
-  visibility      ENUM('private', 'internal', 'public') DEFAULT 'private',
   settings        JSON,
   created_by      VARCHAR(36) REFERENCES users(id),
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
