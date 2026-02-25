@@ -40,12 +40,35 @@ apps/web/src/
 │   │   └── tasks/
 │   └── shared/                  # Common components (layout elements)
 │
+├── app/
+│   ├── contexts/                # Context layer (page-level logic)
+│   │   ├── shared/              # Reusable fetch contexts
+│   │   │   ├── CategoryFetchContext.tsx
+│   │   │   ├── MemberFetchContext.tsx
+│   │   │   └── StatusFetchContext.tsx
+│   │   ├── tasks/               # Task feature contexts
+│   │   │   ├── TaskListContext.tsx
+│   │   │   └── TaskFormContext.tsx
+│   │   ├── issues/              # Issue feature contexts (planned)
+│   │   ├── documents/           # Document feature contexts (planned)
+│   │   └── index.ts             # Barrel export
+│   └── ...
+│
 ├── hooks/                       # Custom React hooks
 ├── services/                    # API Service layer
-├── stores/                      # Zustand state stores
+├── stores/                      # Zustand state stores (data layer)
 ├── types/                       # Global TypeScript definitions
 └── utils/                       # Helper functions
 ```
+
+### Context Layer (`app/contexts/`)
+
+Contexts wrap Zustand stores to provide page-level logic separation. They do **not** replace stores — stores remain the source of truth for data.
+
+**Pattern:**
+- **Shared contexts** (`shared/`): Auto-fetch wrappers (e.g., `CategoryFetchProvider` fetches categories on mount)
+- **Feature contexts** (`tasks/`, `issues/`): Encapsulate filtering, sorting, pagination, event handlers per feature
+- **Pages** consume contexts via custom hooks (`useTaskListContext()`) and only contain UI rendering
 
 ---
 

@@ -86,6 +86,54 @@ const completeTask = useMutation({
 
 ---
 
+## 🔀 Hooks vs Contexts — Phân biệt rõ ràng
+
+Dự án sử dụng cả **Custom Hooks** (`hooks/`) và **React Contexts** (`app/contexts/`). Hai layer này có vai trò khác nhau:
+
+| | Custom Hooks (`hooks/`) | Contexts (`app/contexts/`) |
+|---|---|---|
+| **Vị trí** | `src/hooks/` | `src/app/contexts/` |
+| **Mục đích** | Reusable logic utilities, TanStack Query wrappers | Page-level logic orchestration cho từng feature |
+| **Chứa gì** | `useQuery`, `useMutation`, `useDebounce`, `useLocalStorage` | `useEffect` fetch, `useMemo` filter/sort, event handlers, pagination |
+| **Phạm vi** | Dùng lại ở nhiều nơi, không gắn với feature cụ thể | Gắn với 1 feature/page cụ thể (Tasks, Issues, ...) |
+| **State source** | TanStack Query cache hoặc local state | Wrap Zustand stores, không thay thế chúng |
+| **Ví dụ** | `useProjects()`, `useDebounce()`, `useAuth()` | `useTaskListContext()`, `useIssueFormContext()` |
+
+### Khi nào dùng Hook?
+
+- Logic **tái sử dụng** ở nhiều pages/components
+- Đóng gói 1 API call đơn lẻ (query hoặc mutation)
+- Utility logic không gắn với feature cụ thể (debounce, localStorage, etc.)
+
+### Khi nào dùng Context?
+
+- Orchestrate **nhiều stores** cùng lúc cho 1 page (fetch tasks + statuses + categories + members)
+- Chứa **filtering, sorting, pagination** logic cho list page
+- Chứa **event handlers** (handleEdit, handleDelete, handleView)
+- Cung cấp **form dependencies** cho create/edit page (load statuses, members, categories...)
+
+### Ví dụ minh họa
+
+```tsx
+// ❌ KHÔNG nên: Hook chứa logic đặc thù cho 1 page
+function useTaskListPage() {
+  // fetch 4 stores, filter, sort, paginate...
+  // → Quá phức tạp, không tái sử dụng được
+}
+
+// ✅ NÊN: Context cho page-level logic
+function TaskListProvider({ children }) {
+  // fetch 4 stores, filter, sort, paginate, handlers
+  return <TaskListContext.Provider value={...}>{children}</TaskListContext.Provider>
+}
+
+// ✅ NÊN: Hook cho logic tái sử dụng
+function useDebounce(value, delay) { ... }
+function useProjects(orgId) { ... }
+```
+
+---
+
 ## ✅ Best Practices Checklist
 
 - [ ] Luôn đặt `queryKey` theo hierarchy (ví dụ: `['projects', orgId, projectId]`).

@@ -9,9 +9,26 @@
 
 Hệ thống tuân thủ nghiêm ngặt nguyên tắc **Separation of Concerns (SoC)** và **Single Responsibility Principle (SRP)**. Chúng ta tuyệt đối tránh việc tạo ra một "God Object" (một store chứa tất cả mọi thứ).
 
-Thay vào đó, ứng dụng được chia làm 2 tầng state:
+Thay vào đó, ứng dụng được chia làm 3 tầng state:
 1. **Server State (TanStack Query)**: Quản lý toàn bộ dữ liệu từ API.
-2. **Global UI State (Zustand Slices)**: Được chia nhỏ thành các store độc lập.
+2. **Global UI State (Zustand Slices)**: Được chia nhỏ thành các store độc lập — là source of truth cho data.
+3. **Page-level Logic (React Context)**: Wrap Zustand stores, cung cấp filtering, sorting, pagination, event handlers cho từng feature. Pages chỉ giữ UI rendering thuần túy.
+
+### Context Layer Pattern
+
+```
+app/contexts/
+├── shared/                    # Auto-fetch wrappers dùng chung
+│   ├── CategoryFetchContext   # fetchCategories(type) on mount
+│   ├── MemberFetchContext     # fetchMembers() on mount
+│   └── StatusFetchContext     # fetchStatuses(type) on mount
+├── tasks/
+│   ├── TaskListContext        # List: fetch, filter, sort, paginate, CRUD handlers
+│   └── TaskFormContext        # Form: load dependencies, submit handler
+└── index.ts                   # Barrel export
+```
+
+**Quan trọng:** Contexts **wrap** stores, không thay thế chúng. Zustand stores vẫn giữ nguyên làm data layer.
 
 ---
 
