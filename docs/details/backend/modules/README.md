@@ -30,9 +30,58 @@ Modules sắp xếp theo **dependency order** (module trên là dependency của
 
 | # | Module | Description | Phase |
 |---|--------|-------------|-------|
-| 08 | [Agents](./08-agents-module.md) | AI agent personas | P2 |
-| 09 | [Chat](./09-chat-module.md) | AI chat interface | P2 |
-| 10 | [Workflows](./10-workflows-module.md) | Automation & state machine | P2 |
+| 08 | [Agents](./08-agents-module.md) | AI agents — 4 types: Conversational, Task, Orchestrator, Autonomous | P2 |
+| 09 | [Chat](./09-chat-module.md) | Chat interface — 4 types: Simple, RAG, Tool-enabled, Multi-agent | P2 |
+| 10 | [Workflows](./10-workflows-module.md) | Workflow engine — 4 types: Linear, Conditional, Event-driven, Human-in-the-loop | P2 |
+
+---
+
+## 🔗 Quan hệ Agent ↔ Workflow ↔ Chat
+
+### Tổng quan
+
+```
+User → Chat → Agent
+Agent → (Tool) → Workflow
+Workflow → Step → Agent
+```
+
+- **Agent** là thực thể AI có vai trò, rules, tools, knowledge
+- **Workflow** là luồng xử lý graph có cấu trúc (deterministic)
+- **Chat** là interface layer (kênh giao tiếp), không phải agent, không phải workflow
+
+### So sánh
+
+| Concept  | Là gì                  | Có logic cố định? | Có AI?    | Có state? |
+| -------- | ---------------------- | ----------------- | --------- | --------- |
+| Agent    | Thực thể AI có vai trò | Không cố định     | Có        | Có        |
+| Workflow | Luồng xử lý graph      | Có                | Có thể có | Có        |
+| Chat     | Giao diện hội thoại    | Không             | Có        | Có        |
+
+### Data Flow
+
+```mermaid
+graph LR
+    U[User] --> CH[Chat]
+    CH --> AG[Agent]
+    AG -->|Tool call| WF[Workflow]
+    WF -->|Step executor| AG2[Agent]
+    AG -->|Orchestrator| AG3[Sub-Agent]
+    WF -->|Approval gate| U
+```
+
+### Module tổ chức Backend
+
+```
+modules/
+ ├─ agents/           → Định nghĩa agent (CRUD, config, execution)
+ ├─ workflows/        → Định nghĩa workflow graph (templates, instances)
+ ├─ ai/ (ai-core)     → LLM providers, orchestrator, RAG pipeline
+ └─ chat/             → Conversation state, messages, WebSocket
+```
+
+> **Note:** Hiện tại `agents/` + `chat/` nằm chung trong `ai/` module.
+> Khi refactor, sẽ tách thành 4 module riêng biệt ở trên.
 
 ---
 
@@ -48,7 +97,8 @@ graph TD
     A --> G[07-Master Data]
     F --> H[08-Agents]
     H --> I[09-Chat]
-    C --> J[10-Workflows]
+    H --> J[10-Workflows]
+    C --> J
 ```
 
 ---
@@ -81,4 +131,4 @@ apps/api/src/modules/{module}/
 
 ---
 
-*Last Updated: 2026-02-13*
+*Last Updated: 2026-02-25*

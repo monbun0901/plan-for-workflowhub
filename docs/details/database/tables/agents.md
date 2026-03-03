@@ -11,34 +11,54 @@
 CREATE TABLE agents (
   id              VARCHAR(36) PRIMARY KEY,
   name            VARCHAR(100) NOT NULL,
-  description     TEXT,
+  description     VARCHAR(500),
   
-  -- LLM Connectivity (Backend as a Proxy)
-  provider        VARCHAR(50) NOT NULL,    -- 'ollama', 'openai', 'anthropic', 'vllm', etc.
-  base_url        VARCHAR(255),            -- URL của Provider (vd: http://localhost:11434 hoặc https://api.openai.com)
-  model           VARCHAR(100) NOT NULL,   -- Tên model (vd: 'llama3:8b', 'gpt-4o')
+  -- ── Role & Identity ──
+  role            ENUM('pm', 'developer', 'reviewer', 'analyst', 'writer', 'custom') NOT NULL DEFAULT 'custom',
+  avatar_url      VARCHAR(255),
   
-  -- Prompt Engineering
-  system_prompt   TEXT NOT NULL,           -- "Hướng dẫn hành vi" cho Agent
+  -- ── LLM Configuration ──
+  provider        VARCHAR(50) NOT NULL,       -- 'ollama', 'openai', 'anthropic', 'google', 'vllm'
+  base_url        VARCHAR(255),               -- Custom endpoint (null = default provider URL)
+  model           VARCHAR(100) NOT NULL,      -- 'llama3:8b', 'gpt-4o', 'claude-3.5-sonnet', 'gemini-2.0-flash'
   
-  -- Flexible Configuration
-  ai_settings     JSON,                    -- Lưu temperature, max_tokens...
-  rag_config      JSON,                    -- Thiết lập RAG (Top K, Chunk size, Vector search)
+  -- ── Prompt Engineering ──
+  system_prompt   TEXT NOT NULL,              -- Hướng dẫn hành vi cho Agent
   
+  -- ── Flexible Configuration (JSON) ──
+  ai_settings     JSON,                       -- { temperature, max_tokens, top_p }
+  rag_config      JSON,                       -- { enabled, top_k, similarity_threshold }
+  enabled_tools   JSON,                       -- ["create_task", "search_wiki", "update_issue_status"]
+  
+  -- ── Scope ──
+  project_id      VARCHAR(36) REFERENCES projects(id) ON DELETE SET NULL,
+  
+  -- ── Status & Meta ──
   status          ENUM('active', 'disabled') DEFAULT 'active',
   
+  -- ── Usage Stats ──
+  total_executions    INT DEFAULT 0,
+  total_tokens_used   BIGINT DEFAULT 0,
+  last_used_at        TIMESTAMP NULL,
+  
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_status (status),
+  INDEX idx_role (role),
+  INDEX idx_project (project_id)
 );
 ```
 
 ---
 
-## 🔗 Knowledge Base
+## 🔗 Knowledge Base (Spec Hub)
+
 Agent truy xuất tri thức nội bộ thông qua bảng trung gian **[agent_documents](./agent_documents.md)**.
 
-## 🎯 Purpose
-Bảng này đóng vai trò là một **Danh mục (Registry)** các AI Agents khả dụng cho hệ thống/dự án.
+Cho phép:
+- **Knowledge Scoping:** Agent chuyên biệt chỉ truy cập tài liệu liên quan
+- **RAG Query:** Vector search trên documents đã gắn
 
 ---
 
@@ -46,10 +66,35 @@ Bảng này đóng vai trò là một **Danh mục (Registry)** các AI Agents k
 
 ```typescript
 // models/agent.model.ts
+
+// Knowledge Base (Spec Hub)
+Agent.belongsToMany(Document, {
+  through: 'agent_documents',
+  foreignKey: 'agent_id',
+  otherKey: 'document_id',
+  as: 'knowledge_base'
+});
+
+// Scoped to Project
+Agent.belongsTo(Project, { foreignKey: 'project_id', as: 'project' });
+
+// Generated content
 Agent.hasMany(Task, { foreignKey: 'generated_by_agent', as: 'generatedTasks' });
 Agent.hasMany(Chat, { foreignKey: 'agent_id', as: 'chats' });
 ```
 
 ---
 
-*Last Updated: 2026-02-15*
+## 🎯 Relationships
+
+| Relation | Table | Type | Purpose |
+|---|---|---|---|
+| knowledge_base | agent_documents → documents | M:N | Spec Hub — tài liệu Agent được phép truy cập |
+| project | projects | M:1 | Agent scoped cho project cụ thể (optional) |
+| chats | chats | 1:N | Các phiên chat của Agent |
+| generatedTasks | tasks | 1:N | Tasks được Agent tạo ra |
+| workflow_steps | workflow_templates.steps_config | JSON ref | Agent tham gia workflow nào |
+
+---
+
+*Last Updated: 2026-02-25*
